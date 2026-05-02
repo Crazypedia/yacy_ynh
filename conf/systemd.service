@@ -4,11 +4,17 @@ After=network.target
 
 [Service]
 Type=forking
-User=__APP__
-Group=__APP__
-WorkingDirectory=__INSTALL_DIR__/
-ExecStart=__INSTALL_DIR__/startYACY.sh --startup __DATA_DIR__/
+PIDFile=__DATA_DIR__/DATA/yacy.pid
+WorkingDirectory=__INSTALL_DIR__
+Environment=YACY_DATA_PATH=__DATA_DIR__/DATA
+ExecStart=__INSTALL_DIR__/startYACY.sh
 ExecStop=__INSTALL_DIR__/stopYACY.sh
+User=__APP__
+Group=www-data
+StandardOutput=append:__DATA_DIR__/DATA/LOG/yacy00.log
+StandardError=append:__DATA_DIR__/DATA/LOG/yacy00.log
+TimeoutStartSec=300
+TimeoutStopSec=120
 
 [Install]
 WantedBy=multi-user.target
