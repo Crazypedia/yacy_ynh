@@ -5,13 +5,13 @@ After=network.target
 [Service]
 Type=forking
 WorkingDirectory=__INSTALL_DIR__
-Environment=YACY_DATA_PATH=__DATA_DIR__/DATA
+Environment=YACY_DATA_PATH=__INSTALL_DIR__/DATA
 ExecStart=__INSTALL_DIR__/startYACY.sh
 ExecStop=__INSTALL_DIR__/stopYACY.sh
 User=__APP__
 Group=www-data
-StandardOutput=append:__DATA_DIR__/DATA/LOG/yacy00.log
-StandardError=append:__DATA_DIR__/DATA/LOG/yacy00.log
+StandardOutput=append:__INSTALL_DIR__/DATA/LOG/yacy00.log
+StandardError=append:__INSTALL_DIR__/DATA/LOG/yacy00.log
 TimeoutStartSec=300
 TimeoutStopSec=120
 
