@@ -4,7 +4,6 @@ After=network.target
 
 [Service]
 Type=forking
-PIDFile=__DATA_DIR__/DATA/yacy.pid
 WorkingDirectory=__INSTALL_DIR__
 Environment=YACY_DATA_PATH=__DATA_DIR__/DATA
 ExecStart=__INSTALL_DIR__/startYACY.sh
