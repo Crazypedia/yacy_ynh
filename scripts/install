@@ -45,7 +45,11 @@ ynh_replace --file="$data_dir/DATA/SETTINGS/yacy.conf" \
 ynh_script_progression "Starting $app's systemd service..."
 
 # Start a systemd service
-ynh_systemctl --service="$app" --action="start" --log_path="$data_dir/DATA/LOG/yacy00.log" --wait_until="Started httpd:"
+# ynh_systemctl --service="$app" --action="start" --log_path="$data_dir/DATA/LOG/yacy00.log" --wait_until="Started httpd:"
+ynh_systemctl --service="$app" --action=start
+# Wait for YaCy HTTP to be ready rather than watching log strings
+timeout 300 bash -c 'until curl -sf http://localhost:8090/ > /dev/null 2>&1; do sleep 5; done' \
+  || ynh_die "YaCy HTTP server did not become ready within 300 seconds"
 
 #=================================================
 # END OF SCRIPT
