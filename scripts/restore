@@ -1,5 +1,6 @@
 #!/bin/bash
 
+source _common.sh
 source /usr/share/yunohost/helpers
 
 #=================================================
@@ -9,6 +10,8 @@ ynh_script_progression "Restoring the app main directory..."
 
 ynh_restore "$install_dir"
 
+chown -R "$app:www-data" "$install_dir"
+
 #=================================================
 # RESTORE THE DATA DIRECTORY
 #=================================================
@@ -16,9 +19,10 @@ ynh_script_progression "Restoring the data directory..."
 
 ynh_restore "$data_dir"
 
+ynh_safe_rm "$data_dir/DATA/yacy.running"
+
 chmod 750 "$data_dir"
-chmod -R o-rwx "$data_dir"
-chown -R "$app:www-data" "$data_dir"
+chown -R "$app:$app" "$data_dir"
 
 #=================================================
 # RESTORE SYSTEM CONFIGURATIONS
@@ -29,14 +33,14 @@ ynh_restore "/etc/nginx/conf.d/$domain.d/$app.conf"
 
 ynh_restore "/etc/systemd/system/$app.service"
 systemctl enable "$app.service" --quiet
-yunohost service add "$app" --log="$data_dir/DATA/LOG/yacy00.log"
+yunohost service add "$app" --description="YaCy search engine" --log="$data_dir/DATA/LOG/yacy00.log"
 
 #=================================================
-# RELOAD NGINX AND PHP-FPM OR THE APP SERVICE
+# RELOAD NGINX AND THE APP SERVICE
 #=================================================
 ynh_script_progression "Reloading NGINX web server and $app's service..."
 
-ynh_systemctl --service="$app" --action="start" --log_path="$data_dir/DATA/LOG/yacy00.log" --wait_until="Started httpd:"
+_yacy_start
 
 ynh_systemctl --service=nginx --action=reload
 

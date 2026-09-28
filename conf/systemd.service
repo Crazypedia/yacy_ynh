@@ -3,17 +3,31 @@ Description=YaCy search server
 After=network.target
 
 [Service]
-Type=forking
-WorkingDirectory=__INSTALL_DIR__
-Environment=YACY_DATA_PATH=__INSTALL_DIR__/DATA
-ExecStart=__INSTALL_DIR__/startYACY.sh
-ExecStop=__INSTALL_DIR__/stopYACY.sh
+Type=simple
 User=__APP__
-Group=www-data
-StandardOutput=append:__INSTALL_DIR__/DATA/LOG/yacy00.log
-StandardError=append:__INSTALL_DIR__/DATA/LOG/yacy00.log
+Group=__APP__
+WorkingDirectory=__INSTALL_DIR__/
+Environment=YACY_DATA_PATH=__DATA_DIR__/DATA
+# -f runs Java in the foreground (exec), so systemd tracks the real process and
+# stops it with SIGTERM, which YaCy handles with a clean shutdown.
+ExecStart=__INSTALL_DIR__/startYACY.sh -f -s __DATA_DIR__
+SuccessExitStatus=143
 TimeoutStartSec=300
-TimeoutStopSec=120
+TimeoutStopSec=180
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+# Sandboxing options to harden security
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+RestrictRealtime=yes
+LockPersonality=yes
 
 [Install]
 WantedBy=multi-user.target

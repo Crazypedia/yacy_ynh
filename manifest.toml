@@ -7,7 +7,7 @@ name = "YaCy"
 description.en = "Free and decentralized search engine"
 description.fr = "Moteur de recherche libre et décentralisé"
 
-version = "1.924~ynh4"
+version = "1.924~ynh5"
 
 maintainers = ["Moul"]
 
@@ -23,7 +23,7 @@ architectures = "all"
 multi_instance = false
 ldap = "not_relevant"
 sso = "not_relevant"
-disk = "150M"
+disk = "500M"
 ram.build = "500M"
 ram.runtime = "590M"
 
@@ -51,15 +51,15 @@ ram.runtime = "590M"
     [resources.sources.main]
     url = "https://download.yacy.net/yacy_v1.924_20210209_10069.tar.gz"
     sha256 = "18b88ed77a1dac71182fb84f2ac306c6c9d282fe074d78068f6f2bbec48d1757"
-
-    autoupdate.strategy = "latest_github_tag"
-    autoupdate.asset = "tarball"
+    # No autoupdate: GitHub tags only provide the uncompiled sources. The runnable
+    # release tarballs are published on download.yacy.net with a build timestamp
+    # and commit hash in their name, so they must be bumped by hand.
 
     [resources.system_user]
 
     [resources.install_dir]
     group = "www-data:r-x"
-    
+
     [resources.data_dir]
 
     [resources.permissions]
@@ -71,10 +71,10 @@ ram.runtime = "590M"
     [resources.apt]
     packages_from_raw_bash = """
     if [[ $YNH_DEBIAN_VERSION == "bullseye" ]]; then
-        echo "openjdk-11-jre";
+        echo "openjdk-11-jre-headless";
     elif [[ $YNH_DEBIAN_VERSION == "bookworm" ]]; then
-        echo "openjdk-17-jre";
+        echo "openjdk-17-jre-headless";
     elif [[ $YNH_DEBIAN_VERSION == "trixie" ]]; then
-        echo "openjdk-21-jre";
+        echo "openjdk-21-jre-headless";
     fi
     """

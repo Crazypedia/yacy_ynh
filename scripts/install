@@ -1,4 +1,6 @@
 #!/bin/bash
+
+source _common.sh
 source /usr/share/yunohost/helpers
 
 #=================================================
@@ -8,48 +10,47 @@ ynh_script_progression "Setting up source files..."
 
 ynh_setup_source --dest_dir="$install_dir"
 
-#=================================================
-# SYSTEM CONFIGURATION
-#=================================================
-ynh_script_progression "Adding system configurations related to $app..."
+# The tarball ships an empty DATA folder: YaCy's data lives in $data_dir instead
+ynh_safe_rm "$install_dir/DATA"
 
-ynh_config_add_nginx
-ynh_config_add_systemd
-yunohost service add "$app" --log="$install_dir/DATA/LOG/yacy00.log"
+chown -R "$app:www-data" "$install_dir"
 
 #=================================================
 # APP INITIAL CONFIGURATION
 #=================================================
 ynh_script_progression "Configuring $app..."
 
-# Start temporarily to run initial password configuration
-ynh_systemctl --service="$app" --action="start" \
-    --log_path="$install_dir/DATA/LOG/yacy00.log" \
-    --wait_until="Started httpd:"
+# Seed the configuration from YaCy's defaults, exactly as YaCy does on first
+# start, so it can be adjusted before the server ever runs.
+mkdir -p "$data_dir/DATA/SETTINGS" "$data_dir/DATA/LOG"
+cp "$install_dir/defaults/yacy.init" "$data_dir/DATA/SETTINGS/yacy.conf"
+_yacy_apply_ynh_settings
 
-ynh_exec_as_app YACY_DATA_PATH="$install_dir/DATA" \
-    "$install_dir/bin/passwd.sh" "$password"
+chmod 750 "$data_dir"
+chown -R "$app:$app" "$data_dir"
 
-ynh_systemctl --service="$app" --action="stop" \
-    --log_path="$install_dir/DATA/LOG/yacy00.log"
+# Set the administrator password while YaCy is stopped (writes the hash to yacy.conf)
+ynh_exec_as_app env YACY_DATA_PATH="$data_dir/DATA" "$install_dir/bin/passwd.sh" "$password"
 
-ynh_replace \
-    --file="$install_dir/DATA/SETTINGS/yacy.conf" \
-    --match="promoteSearchPageGreeting.homepage=https://yacy.net" \
-    --replace="promoteSearchPageGreeting.homepage=https://$domain$path"
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression "Adding system configurations related to $app..."
+
+ynh_config_add_nginx
+
+ynh_config_add_systemd
+yunohost service add "$app" --description="YaCy search engine" --log="$data_dir/DATA/LOG/yacy00.log"
 
 #=================================================
 # START SYSTEMD SERVICE
 #=================================================
 ynh_script_progression "Starting $app's systemd service..."
 
-ynh_systemctl --service="$app" --action="start"
-
-timeout 300 bash -c \
-    'until curl -sf http://localhost:8090/ > /dev/null 2>&1; do sleep 5; done' \
-    || ynh_die "YaCy HTTP server did not become ready within 300 seconds"
+_yacy_start
 
 #=================================================
 # END OF SCRIPT
 #=================================================
+
 ynh_script_progression "Installation of $app completed"

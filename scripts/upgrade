@@ -1,5 +1,6 @@
 #!/bin/bash
 
+source _common.sh
 source /usr/share/yunohost/helpers
 
 #=================================================
@@ -7,43 +8,66 @@ source /usr/share/yunohost/helpers
 #=================================================
 ynh_script_progression "Stopping $app's systemd service..."
 
-ynh_systemctl --service="$app" --action="stop" --log_path="$data_dir/DATA/LOG/yacy00.log"
+ynh_systemctl --service="$app" --action="stop"
+
+#=================================================
+# ENSURE DOWNWARD COMPATIBILITY
+#=================================================
+ynh_script_progression "Ensuring downward compatibility..."
+
+# Some intermediate versions of this package kept YaCy's DATA folder inside
+# $install_dir, which the source upgrade below would wipe: move it to $data_dir.
+if [ -d "$install_dir/DATA/SETTINGS" ] && [ ! -d "$data_dir/DATA/SETTINGS" ]; then
+    ynh_print_info "Moving YaCy data from $install_dir/DATA to $data_dir/DATA..."
+    mkdir -p "$data_dir"
+    ynh_safe_rm "$data_dir/DATA"
+    mv "$install_dir/DATA" "$data_dir/DATA"
+fi
+
+# A stale lock file from an unclean shutdown makes YaCy's tools think it is running
+ynh_safe_rm "$data_dir/DATA/yacy.running"
 
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE
 #=================================================
 ynh_script_progression "Upgrading source files..."
 
-# Download, check integrity, uncompress and patch the source from app.src
 ynh_setup_source --dest_dir="$install_dir" --full_replace
 
-#=================================================
-# REAPPLY SYSTEM CONFIGURATIONS
-#=================================================
-ynh_script_progression "Upgrading system configurations related to $app..."
+ynh_safe_rm "$install_dir/DATA"
 
-# Create a dedicated NGINX config
-ynh_config_add_nginx
-
-# Create a dedicated systemd config
-ynh_config_add_systemd
-yunohost service add "$app" --log="$data_dir/DATA/LOG/yacy00.log"
+chown -R "$app:www-data" "$install_dir"
 
 #=================================================
 # UPDATE A CONFIG FILE
 #=================================================
 ynh_script_progression "Updating configuration..."
 
-ynh_replace --file="$data_dir/DATA/SETTINGS/yacy.conf" \
-    --match="promoteSearchPageGreeting.homepage=https://yacy.net" \
-    --replace="promoteSearchPageGreeting.homepage=https://$domain$path"
+mkdir -p "$data_dir/DATA/SETTINGS" "$data_dir/DATA/LOG"
+if [ ! -f "$data_dir/DATA/SETTINGS/yacy.conf" ]; then
+    cp "$install_dir/defaults/yacy.init" "$data_dir/DATA/SETTINGS/yacy.conf"
+fi
+_yacy_apply_ynh_settings
+
+chmod 750 "$data_dir"
+chown -R "$app:$app" "$data_dir"
+
+#=================================================
+# REAPPLY SYSTEM CONFIGURATIONS
+#=================================================
+ynh_script_progression "Upgrading system configurations related to $app..."
+
+ynh_config_add_nginx
+
+ynh_config_add_systemd
+yunohost service add "$app" --description="YaCy search engine" --log="$data_dir/DATA/LOG/yacy00.log"
 
 #=================================================
 # START SYSTEMD SERVICE
 #=================================================
 ynh_script_progression "Starting $app's systemd service..."
 
-ynh_systemctl --service="$app" --action="start" --log_path="$data_dir/DATA/LOG/yacy00.log" --wait_until="Started httpd:"
+_yacy_start
 
 #=================================================
 # END OF SCRIPT
